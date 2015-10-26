@@ -6,3 +6,7 @@ process and provide search over news articles from the web
 (to be more precise the app should get articles from a pre-selected set of RSS feeds).
 
 NOTE: The project is currently work in progress.
+
+## Running ##
+
+-Dconfig.file=/Users/isorokoumov/Projects/NewsHub/NewsHubProject/dev.conf
