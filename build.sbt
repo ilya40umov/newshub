@@ -1,7 +1,6 @@
 name := """newshub"""
-
+organization := "org.i40u"
 version := "1.0.0"
-
 scalaVersion := "2.11.7"
 
 resolvers += Resolver.sonatypeRepo("public")
@@ -48,9 +47,8 @@ libraryDependencies ++= Seq(
 )
 
 libraryDependencies ++= Seq(
-  "org.scalatest" %% "scalatest" % "2.2.4" % "test",
+  "org.scalatest" %% "scalatest" % "2.2.5" % "test",
   "org.scalamock" %% "scalamock-scalatest-support" % "3.2.2" % "test",
-  "io.spray" %% "spray-testkit" % "1.3.3" % "test",
   "com.typesafe.akka" %% "akka-testkit" % akkaVersion % "test",
   "com.typesafe.akka" %% "akka-http-testkit-experimental" % akkaStreamVersion % "test"
 )

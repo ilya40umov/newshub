@@ -3,7 +3,8 @@ package org.i40u.newshub.storage
 import com.sksamuel.elastic4s.ElasticDsl._
 import com.sksamuel.elastic4s.jackson.ElasticJackson.Implicits._
 import com.sksamuel.elastic4s.mappings.FieldType.StringType
-import com.sksamuel.elastic4s.{ElasticClient, StandardAnalyzer}
+import com.sksamuel.elastic4s.{ElasticClient, ElasticDsl, StandardAnalyzer}
+import org.elasticsearch.action.index.IndexRequest.OpType
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -12,42 +13,72 @@ import scala.concurrent.{ExecutionContext, Future}
  */
 trait FeedRepository {
 
-  def save(feed: Feed): Future[Unit]
+  def create(feed: Feed): Future[Feed]
+
+  def update(feedId: String)(update: (Feed) => Feed): Future[Feed]
+
+  def delete(feedId: String): Future[Feed]
+
+  def findById(feedId: String): Future[Option[Feed]]
+
+  def find(title: Option[String], from: Int, limit: Int): Future[Seq[Feed]]
 
   def flushIndex(): Future[Unit]
-
-  def findAll(): Future[Seq[Feed]]
 }
 
-class FeedRepositoryImpl(client: ElasticClient)(implicit ec: ExecutionContext) extends FeedRepository {
+class FeedRepositoryImpl(cli: ElasticClient, ec: ExecutionContext)
+  extends BaseRepository with FeedRepository {
 
-  if (!client.execute(index exists "feeds").await.isExists) {
+  override implicit val client = cli
+  override implicit val executionContext = ec
+  override implicit val indexAndType = "feeds" / "feed"
+
+  if (!client.execute(index exists indexAndType.index).await.isExists) {
     client.execute {
-      create index "feeds" mappings {
-        "feed" as Seq(
-          "url" typed StringType index "analyzed",
+      ElasticDsl.create index indexAndType.index mappings {
+        indexAndType.`type` as Seq(
+          "feedId" typed StringType index NotAnalyzed,
+          "url" typed StringType index NotAnalyzed,
           "title" typed StringType index "analyzed" analyzer StandardAnalyzer
         )
       }
     }.await
   }
 
-  override def save(feed: Feed): Future[Unit] = {
+  override def create(feed: Feed): Future[Feed] = {
     client.execute {
-      index into "feeds" / "feed" id feed.url source feed
-    }.map(_ => ())
+      index into indexAndType id feed.feedId source feed opType OpType.CREATE
+    }.map(_ => feed)
+  }
+
+  override def update(feedId: String)(update: (Feed) => Feed): Future[Feed] =
+    super[BaseRepository].update[Feed](feedId)(update)
+
+  override def delete(feedId: String): Future[Feed] =
+    super[BaseRepository].delete[Feed](feedId)
+
+  override def findById(feedId: String): Future[Option[Feed]] =
+    super[BaseRepository].findById[Feed](feedId)
+
+  override def find(mbTitle: Option[String], qFrom: Int, qLimit: Int): Future[Seq[Feed]] = {
+    client.execute {
+      search in indexAndType query {
+        mbTitle match {
+          case Some(title) => bool(
+            must(
+              stringQuery(title) analyzer StandardAnalyzer field "title"
+            )
+          )
+          case None => matchAllQuery
+        }
+      } from qFrom limit qLimit
+    }.map(_.as[Feed])
   }
 
   override def flushIndex(): Future[Unit] = {
     client.execute {
-      flush index "feeds"
+      flush index indexAndType.index
     } map { _ => () }
-  }
-
-  override def findAll(): Future[Seq[Feed]] = {
-    client.execute {
-      search in "feeds" / "feed" query matchAllQuery limit 10000
-    }.map(_.as[Feed])
   }
 
 }

@@ -56,7 +56,7 @@ class PollingManager(config: Config,
   def receiveKickOff: Receive = receiveGimmeUrlToPoll orElse {
     case KickOffPolling =>
       logger.info("Searching for feeds to start polling on.")
-      feedRepository.findAll() pipeTo self
+      findAllFeeds pipeTo self
       context.become(receiveFeeds)
   }
   
@@ -71,7 +71,7 @@ class PollingManager(config: Config,
       context.become(receivePollFeed)
     case Status.Failure(cause) =>
       logger.error("Failed to load the feeds from repository. Retrying...", cause)
-      feedRepository.findAll() pipeTo self
+      findAllFeeds pipeTo self
   }
 
   def receivePollFeed: Receive = receiveGimmeUrlToPoll orElse {
@@ -88,7 +88,9 @@ class PollingManager(config: Config,
           idleWorkers += sender()
       }
   }
-  
+
+  def findAllFeeds = feedRepository.find(title = None, from = 0, limit = 50000)
+
   def enqueuePoll(pollFeed: PollFeed): Unit = {
     if (idleWorkers.nonEmpty) {
       idleWorkers.dequeue() ! pollFeed
