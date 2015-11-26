@@ -2,6 +2,7 @@ package org.i40u.newshub.storage
 
 import com.fasterxml.jackson.datatype.joda.JodaModule
 import com.sksamuel.elastic4s.ElasticClient
+import com.sksamuel.elastic4s.ElasticDsl.RichFuture
 import com.sksamuel.elastic4s.jackson.JacksonJson
 import org.elasticsearch.action.admin.cluster.health.ClusterHealthRequest
 import org.elasticsearch.common.settings.ImmutableSettings
@@ -12,7 +13,7 @@ import org.i40u.newshub.Kernel
  */
 trait Storage {
 
-  def waitForStorageToPrepare(): Unit
+  def waitForStorageToGetReady(): Unit
 
   def feedRepository: FeedRepository
 
@@ -29,12 +30,12 @@ trait DefaultStorage extends Storage {
     .put("path.home", s"${home.getAbsolutePath}/elastic/")
   lazy val client = ElasticClient.local(settings.build)
 
-  override lazy val articleRepository = new ArticleRepositoryImpl(client, executionContext)
-  override lazy val feedRepository = new FeedRepositoryImpl(client, executionContext)
+  override lazy val articleRepository = new ArticleRepositoryImpl(client)
+  override lazy val feedRepository = new FeedRepositoryImpl(client)
 
-  override def waitForStorageToPrepare(): Unit = {
-    // XXX perhaps it makes sense to call repositories here so that they can ensure all indexes are in place
-    // and only then wait for yellow status
+  override def waitForStorageToGetReady(): Unit = {
+    articleRepository.createIndex(dropIfExists = false).await
+    feedRepository.createIndex(dropIfExists = false).await
     client.admin.cluster().health(new ClusterHealthRequest().waitForYellowStatus()).actionGet()
   }
 }

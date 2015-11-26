@@ -21,7 +21,7 @@ object ArticleRepository {
 
 }
 
-trait ArticleRepository {
+trait ArticleRepository extends Repository {
 
   def update(url: String)(update: Article => Article): Future[Article]
 
@@ -33,37 +33,25 @@ trait ArticleRepository {
 
 }
 
-class ArticleRepositoryImpl(cli: ElasticClient, ec: ExecutionContext)
-  extends BaseRepository with ArticleRepository with StrictLogging {
+class ArticleRepositoryImpl(client: ElasticClient)(implicit ec: ExecutionContext)
+  extends BaseRepository(client, "articles" / "article") with ArticleRepository with StrictLogging {
 
-  override implicit val client = cli
-  override implicit val executionContext = ec
-  override implicit val indexAndType = "articles" / "article"
+  override val typeMapping = Seq(
+    "url" typed StringType index NotAnalyzed,
+    "origUrls" typed StringType index NotAnalyzed,
+    "title" typed StringType index "analyzed" analyzer StandardAnalyzer,
+    "content" typed StringType index "analyzed" analyzer StandardAnalyzer,
+    "pubDate" typed DateType index NotAnalyzed,
+    "imageUrl" typed StringType index NotAnalyzed
+  )
 
-  if (!client.execute(index exists indexAndType.index).await.isExists) {
-    client.execute {
-      create index indexAndType.index mappings {
-        indexAndType.`type` as Seq(
-          "url" typed StringType index NotAnalyzed,
-          "origUrls" typed StringType index NotAnalyzed,
-          "title" typed StringType index "analyzed" analyzer StandardAnalyzer,
-          "content" typed StringType index "analyzed" analyzer StandardAnalyzer,
-          "pubDate" typed DateType index NotAnalyzed,
-          "imageUrl" typed StringType index NotAnalyzed
-        )
-      }
-    }.await
-  }
+  override def update(url: String)(update: (Article) => Article): Future[Article] = doUpdate(url)(update)
 
-  override def update(url: String)(update: (Article) => Article): Future[Article] =
-    super[BaseRepository].update(url)(update)
-
-  override def upsert(url: String)(upsert: (Option[Article]) => Article): Future[Article] =
-    super[BaseRepository].upsert(url)(upsert)
+  override def upsert(url: String)(upsert: (Option[Article]) => Article): Future[Article] = doUpsert(url)(upsert)
 
   override def existsForUrl(url: String): Future[Boolean] = {
     client.execute {
-      search in "articles" / "article" query {
+      search in indexAndType query {
         bool(
           should(
             termQuery("url", url),
@@ -78,7 +66,7 @@ class ArticleRepositoryImpl(cli: ElasticClient, ec: ExecutionContext)
 
   override def performSearch(searchCriteria: ArticleSearch, qFrom: Int, qLimit: Int): Future[Seq[Article]] = {
     client.execute {
-      search in "articles" / "article" query {
+      search in indexAndType query {
         searchCriteria match {
           case ArticleSearch(None, None) =>
             matchAllQuery

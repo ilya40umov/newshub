@@ -3,6 +3,7 @@
 *.iml
 IntelliJ/
 .idea/
+tmp/
 
 # sbt specific
 .cache

@@ -8,6 +8,8 @@ resolvers += Resolver.sonatypeRepo("public")
 val akkaVersion = "2.3.12"
 val akkaStreamVersion = "1.0"
 
+scalacOptions ++= Seq("-deprecation", "-feature")
+
 libraryDependencies ++= Seq(
   // logging
   "org.slf4j" % "slf4j-api" % "1.7.12",

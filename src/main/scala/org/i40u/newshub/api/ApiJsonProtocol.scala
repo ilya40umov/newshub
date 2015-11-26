@@ -16,7 +16,7 @@ trait ApiJsonProtocol extends SprayJsonSupport with DefaultJsonProtocol {
 
   implicit object DateJsonFormat extends RootJsonFormat[DateTime] {
 
-    val isoDateFormat = ISODateTimeFormat.dateTimeNoMillis()
+    val isoDateFormat = ISODateTimeFormat.dateTime()
 
     override def write(obj: DateTime) = JsString(isoDateFormat.print(obj))
 

@@ -15,7 +15,7 @@ object NewsHubApp
   //  Await.ready(feedRepository.save(Feed("http://winteriscoming.net/feed/", "Winter is Coming")), 1.minute)
   //  Await.ready(feedRepository.flushIndex(), 1.minute)
 
-  waitForStorageToPrepare()
+  waitForStorageToGetReady()
   //  kickOffCrawler()
   startUpApi()
 

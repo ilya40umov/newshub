@@ -90,7 +90,7 @@ class FeedRoute(feedRepository: FeedRepository)
         pathPrefix("flush_index") {
           post {
             complete {
-              feedRepository.flushIndex().map {
+              feedRepository.refreshIndex(flush = true).map {
                 case _ => OK -> "Index flushed."
               }
             }
