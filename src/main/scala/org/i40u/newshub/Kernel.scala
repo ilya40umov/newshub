@@ -2,14 +2,19 @@ package org.i40u.newshub
 
 import java.io.File
 
-import akka.actor.ActorSystem
+import akka.actor.{ActorRef, ActorSystem}
 import com.typesafe.config.{Config, ConfigFactory}
+import org.i40u.newshub.Kernel.EventBus
 
 import scala.concurrent.ExecutionContext
 
 /**
  * @author ilya40umov
  */
+object Kernel {
+  type EventBus = akka.event.EventBus {type Event = AnyRef; type Classifier = Class[_]; type Subscriber = ActorRef}
+}
+
 trait Kernel {
 
   def home: File
@@ -17,6 +22,8 @@ trait Kernel {
   def config: Config
 
   implicit def system: ActorSystem
+
+  def eventBus: EventBus = system.eventStream
 
   implicit def executionContext: ExecutionContext
 }

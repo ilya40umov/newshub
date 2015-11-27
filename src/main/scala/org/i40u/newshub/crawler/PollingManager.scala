@@ -4,7 +4,7 @@ import akka.actor._
 import akka.pattern._
 import com.typesafe.config.Config
 import com.typesafe.scalalogging.StrictLogging
-import org.i40u.newshub.storage.{ArticleRepository, Feed, FeedRepository}
+import org.i40u.newshub.storage._
 
 import scala.collection.mutable
 import scala.concurrent.duration._
@@ -50,6 +50,8 @@ class PollingManager(config: Config,
     context.actorOf(PollingWorker.props(httpAccessManager, feedParser, articleRepository, scrapingManager),
       s"pollingWorker-$idx")
   }
+
+  // TODO subscribe to FeedCreated/FeedDeleted events => schedule/cancel polling upon these events
 
   override def receive: Receive = receiveKickOff
 

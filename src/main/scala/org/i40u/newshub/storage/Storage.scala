@@ -31,7 +31,7 @@ trait DefaultStorage extends Storage {
   lazy val client = ElasticClient.local(settings.build)
 
   override lazy val articleRepository = new ArticleRepositoryImpl(client)
-  override lazy val feedRepository = new FeedRepositoryImpl(client)
+  override lazy val feedRepository = new FeedRepositoryImpl(client, eventBus)
 
   override def waitForStorageToGetReady(): Unit = {
     articleRepository.createIndex(dropIfExists = false).await

@@ -6,8 +6,10 @@ import com.sksamuel.elastic4s.mappings.FieldType.StringType
 import com.sksamuel.elastic4s.{ElasticClient, StandardAnalyzer}
 import org.elasticsearch.action.index.IndexRequest.OpType
 import org.elasticsearch.transport.RemoteTransportException
+import org.i40u.newshub.Kernel.EventBus
 
 import scala.concurrent.{ExecutionContext, Future}
+import scala.util.Success
 
 /**
  * @author ilya40umov
@@ -26,7 +28,7 @@ trait FeedRepository extends Repository {
 
 }
 
-class FeedRepositoryImpl(client: ElasticClient)(implicit ec: ExecutionContext)
+class FeedRepositoryImpl(client: ElasticClient, eventBus: EventBus)(implicit ec: ExecutionContext)
   extends BaseRepository(client, "feeds" / "feed") with FeedRepository {
 
   override val typeMapping = Seq(
@@ -47,12 +49,18 @@ class FeedRepositoryImpl(client: ElasticClient)(implicit ec: ExecutionContext)
       case rte: RemoteTransportException if rte.getCause != null && rte.getCause.getClass == classOf[DAEException] =>
         new DocumentAlreadyExistsException(rte.getCause.getMessage, rte.getCause)
       case e => e
-    })
+    }) andThen {
+      case Success(_) => eventBus.publish(FeedCreated(feed.feedId, feed.url))
+    }
   }
 
   override def update(feedId: String)(update: (Feed) => Feed): Future[Feed] = doUpdate[Feed](feedId)(update)
 
-  override def delete(feedId: String): Future[Feed] = doDelete[Feed](feedId)
+  override def delete(feedId: String): Future[Feed] = {
+    doDelete[Feed](feedId) andThen {
+      case Success(_) => eventBus.publish(FeedDeleted(feedId))
+    }
+  }
 
   override def findById(feedId: String): Future[Option[Feed]] = doFindById[Feed](feedId)
 

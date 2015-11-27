@@ -1,7 +1,9 @@
 package org.i40u.newshub.storage
 
+import akka.actor.ActorSystem
 import com.sksamuel.elastic4s.ElasticClient
 import com.sksamuel.elastic4s.ElasticDsl._
+import org.i40u.newshub.Kernel._
 import org.i40u.newshub.storage.ArticleRepository.ArticleSearch
 import org.i40u.newshub.storage.BaseRepository._
 import org.joda.time.DateTime
@@ -9,11 +11,12 @@ import org.joda.time.DateTime
 /**
  * @author ilya40umov
  */
-class ArticleRepositorySpec extends RepositorySpec[ArticleRepository] {
+class ArticleRepositorySpec extends RepositorySpec[ArticleRepository](ActorSystem("ArticleRepositorySys")) {
 
   implicit val ctx = scala.concurrent.ExecutionContext.global
 
-  override def newRepository(client: ElasticClient): ArticleRepository = new ArticleRepositoryImpl(client)
+  override def newRepository(client: ElasticClient, eventBus: EventBus): ArticleRepository =
+    new ArticleRepositoryImpl(client)
 
   val article0 = Article("http://watchersonthewall.com/goo304/", Set.empty, "Six is Coming", "", DateTime.now, None)
 
