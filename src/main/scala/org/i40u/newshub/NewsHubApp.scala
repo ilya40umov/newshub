@@ -16,7 +16,7 @@ object NewsHubApp
   //  Await.ready(feedRepository.flushIndex(), 1.minute)
 
   waitForStorageToGetReady()
-  //  kickOffCrawler()
+  kickOffCrawler()
   startUpApi()
 
 }
